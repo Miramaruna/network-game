@@ -1,0 +1,5 @@
+venv/
+# продолжи
+__pycache__/
+*.pyc
+*.pyo
