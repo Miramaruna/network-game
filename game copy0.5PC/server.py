@@ -29,6 +29,13 @@ current_id = 0
 MAP_WIDTH = 2000
 MAP_HEIGHT = 2000
 
+def send_reliable(sock, data):
+    pickled_data = pickle.dumps(data)
+    # 1. Создаем 4-байтовый заголовок с длиной данных
+    header = struct.pack('>I', len(pickled_data))
+    # 2. Отправляем заголовок, а затем данные
+    sock.sendall(header + pickled_data)
+
 # --- ПОТОК ДЛЯ БОТОВ (ИСПРАВЛЕННЫЙ) ---
 def bot_simulation_thread():
     """Обновляет ботов и их стрельбу"""
@@ -79,12 +86,13 @@ def bot_simulation_thread():
 def threaded_client(conn, player_id):
     global chat_log, current_id
     
+    # send_reliable(conn, players[player_id])
     conn.send(pickle.dumps(players[player_id]))
     chat_log.append(f"[SERVER] Игрок {player_id} присоединился!")
     
     while True:
         try:
-            data = pickle.loads(conn.recv(4096*32))
+            data = pickle.loads(conn.recv(4096*8))
 
             if not data: break
             

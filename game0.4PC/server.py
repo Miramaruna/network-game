@@ -3,7 +3,7 @@ from _thread import *
 import pickle
 from player import Player
 
-server = "" 
+server = "" # айпи компьютера, на котором запускается сервер
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
