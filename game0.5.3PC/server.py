@@ -4,12 +4,9 @@ import pickle
 import time
 import random
 import pygame
-import os
 from player import Player, Bot, Wall
 
-
-# server = "127.0.0.1" 
-server = "192.168.0.105"
+server = "192.168.0.105" 
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,34 +76,23 @@ def bot_simulation_thread():
                                     
                                     if target.hp <= 0:
                                         chat_log.append(f"[KILL] {p.nickname} уничтожил {target.nickname}!")
-                                        # target.respawn(MAP_WIDTH, MAP_HEIGHT)
+                                        target.respawn(MAP_WIDTH, MAP_HEIGHT)
                                     break
                 
                 for b in bullets_to_remove:
                     if b in p.bullets: p.bullets.remove(b)
-
             
+            # --- 3. Update and clean up Static Walls (New) ---
+            walls_to_remove = []
+            for w_id, wall in static_entities.items():
+                if time.time() - wall.created_time >= Wall.WALL_DURATION:
+                    walls_to_remove.append(w_id)
+            
+            for w_id in walls_to_remove:
+                del static_entities[w_id]
                 
         except Exception as e:
             print(f"[BOT THREAD ERROR]: {e}")
-            
-def server_works():
-    # print("SERVER WORKS THREAD STARTED")
-    # clock = pygame.time.Clock()
-    
-    # while True:
-        # print("SERVER TICK")
-        # clock.tick(1)
-        
-        walls_to_remove = []
-        for w_id, wall in static_entities.items():
-            if time.time() - wall.created_time >= Wall.WALL_DURATION:
-                walls_to_remove.append(w_id)
-                
-        # print(walls_to_remove)
-                
-        for w_id in walls_to_remove:
-            del static_entities[w_id]
 
 def threaded_client(conn, player_id):
     global chat_log, current_id, static_entities, wall_id_counter
@@ -123,33 +109,26 @@ def threaded_client(conn, player_id):
             new_msg = data.get("msg")
             hit_data = data.get("hits", []) 
             ability_cast = data.get("ability_cast") # NEW: Ability cast request
-            player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
             
             if p_obj:
                 if player_id in players:
                     # Preserve server-side HP, abilities, and Wall status
                     current_hp = players[player_id].hp
                     current_abilities = players[player_id].abilities
-                    # current_nickname = players[player_id].nickname
-                    current_skin_id = players[player_id].skin_id  # Сохраняем скин
                     
                     players[player_id] = p_obj 
                     players[player_id].hp = current_hp
-                    players[player_id].abilities = current_abilities
-                    players[player_id].nickname = player_nick
-                    players[player_id].skin_id = current_skin_id  # Восстанавливаем скин
+                    players[player_id].abilities = current_abilities # Preserve server-side ability state
                     
                     # Ensure the server-side rect is updated immediately
                     players[player_id].update_rect()
-                    
-                    server_works()
                     
                     # Respawn check (Existing logic)
                     if p_obj.hp <= 0:
                         server_p = players[player_id] 
                         server_p.x = random.randint(100, MAP_WIDTH - 100)
                         server_p.y = random.randint(100, MAP_HEIGHT - 100)
-                        p_obj.respawn(MAP_WIDTH, MAP_HEIGHT)
+                        # p_obj.respawn(MAP_WIDTH, MAP_HEIGHT)
 
             for hit in hit_data:
                 target_id = hit["target_id"]
@@ -187,6 +166,7 @@ def threaded_client(conn, player_id):
                 elif ability_key == "shield":
                     players[player_id].abilities["shield"].activate(players[player_id])
 
+            player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
             if new_msg:
                 if new_msg.startswith("/bot"):
                     msgCount = new_msg.split()
@@ -212,8 +192,6 @@ def threaded_client(conn, player_id):
     conn.close()
 
 start_new_thread(bot_simulation_thread, ())
-# start_new_thread(server_works())
-# server_works()
 
 while True:
     conn, addr = s.accept()

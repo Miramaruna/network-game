@@ -267,12 +267,6 @@ class Bot(Player):
         target = None
         my_center = (self.x + self.width//2, self.y + self.height//2)
         
-        if self.hp <= 0:
-            self.x = random.randint(100, 2000 - 100)
-            self.y = random.randint(100, 2000 - 100)
-            self.hp = 100
-
-        
         for p_id, p in all_players.items():
             if p.id != self.id and p.hp > 0: # Игнорируем мертвых
                 other_center = (p.x + p.width//2, p.y + p.height//2)

@@ -84,7 +84,7 @@ def bot_simulation_thread():
                 
                 for b in bullets_to_remove:
                     if b in p.bullets: p.bullets.remove(b)
-
+            
             
                 
         except Exception as e:

@@ -22,15 +22,10 @@ pygame.display.set_caption("Neon Shooter: Skins Update")
 # --- SKINS LOADING (NEW) ---
 SKINS_DATA = {}
 
-def load_skins():
+def load_skins(path="skins.json"):
     global SKINS_DATA
     try:
-        # Получаем директорию, где находится client.py
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Строим полный путь к файлу скинов
-        config_path = os.path.join(current_dir, "Config", "skins.json")
-        
-        with open(config_path, "r", encoding='utf-8') as f:
+        with open(path, "r", encoding='utf-8') as f:
             SKINS_DATA = json.load(f)
         print("Скины загружены:", list(SKINS_DATA.keys()))
     except Exception as e:
@@ -182,11 +177,11 @@ def draw_hud(player, fps):
 # --- MENUS ---
 def main_menu():
     clock = pygame.time.Clock()
-    user_ip = "192.168.0.105"
+    user_ip = "127.0.0.1"
     user_nick = ""
     active_field = "NICK"
     
-    skins = ["DEFAULT", "RED_CYBORG", "GOLD_ELITE", "TOXIC_GREEN", "VOID_WALKER"]
+    skins = ["CYAN_NEON", "RED_CYBORG", "GOLD_ELITE"]
     skin_idx = 0
 
     while True:
@@ -355,13 +350,11 @@ def game_loop(server_ip, nickname, selected_skin):
             server_p = all_players[p.id]
             p.hp = server_p.hp     
             p.setPose(server_p.x, server_p.y)
-            # ОБНОВЛЯЕМ СПОСОБНОСТИ
             for key, ability in server_p.abilities.items():
                 if key in p.abilities:
                     p.abilities[key].cooldown = ability.cooldown
                     p.abilities[key].duration = ability.duration
-                else: 
-                    p.abilities[key] = ability
+                else: p.abilities[key] = ability
 
         # --- DRAWING ---
         draw_modern_grid(win, scroll)
@@ -370,8 +363,12 @@ def game_loop(server_ip, nickname, selected_skin):
             wall.draw(win, scroll)
 
         for p_id, player in all_players.items():
-            # ПРИМЕНЯЕМ СКИН ДЛЯ КАЖДОГО ИГРОКА
+            # --- ВНЕДРЕНИЕ СКИНОВ ---
+            # Получаем данные скина из глобального SKINS_DATA по ID скина игрока
+            # Если скин не найден в JSON, берем DEFAULT
             skin_props = SKINS_DATA.get(player.skin_id, SKINS_DATA["DEFAULT"])
+            
+            # Применяем цвета к объекту игрока перед отрисовкой
             player.color = skin_props.get("body_color", (255, 255, 255))
             player.trail_color = skin_props.get("trail_color", player.color)
             player.outline_color = skin_props.get("outline_color", (255, 255, 255))
@@ -418,7 +415,6 @@ def game_loop(server_ip, nickname, selected_skin):
             draw_text_freetype(FONT_UI, "Нажми ENTER для чата", (120, 120, 120), 10, input_y + 5)
 
         draw_hud(p, int(clock.get_fps()))
-        draw_text_freetype(FONT_HUD, f"Pos: {p.x}, {p.y}", (255, 255, 0), WIDTH - 150, 10)
         mx, my = pygame.mouse.get_pos()
         draw_custom_cursor(mx, my)
 

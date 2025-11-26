@@ -3,253 +3,198 @@ import math
 import random
 import time
 
-# --- CACHE (Оставляем как было) ---
-PARTICLE_SURF_CACHE = {}
-
-def get_particle_surf(size, color, alpha):
-    # Преобразуем список цветов в кортеж, чтобы использовать как ключ словаря
-    color_tuple = tuple(color)
-    key = (size, color_tuple, alpha)
-    if key not in PARTICLE_SURF_CACHE:
-        s = pygame.Surface((size, size), pygame.SRCALPHA)
-        s.fill((*color_tuple, alpha))
-        PARTICLE_SURF_CACHE[key] = s
-    return PARTICLE_SURF_CACHE[key]
-
-class Ability:
-    def __init__(self, name, cooldown_frames, duration_frames):
-        self.name = name
-        self.cooldown_max = cooldown_frames
-        self.duration_max = duration_frames
-        self.cooldown = 0
-        self.duration = 0
-    
-    def activate(self, player_obj):
-        if self.cooldown <= 0:
-            self.duration = self.duration_max
-            self.cooldown = self.cooldown_max
-            return True
-        return False
-        
-    def update(self):
-        if self.duration > 0: self.duration -= 1
-        if self.cooldown > 0: self.cooldown -= 1
-        
-class ShieldAbility(Ability):
-    def __init__(self):
-        super().__init__("SHIELD", cooldown_frames=300, duration_frames=180)
-
-class WallAbility(Ability):
-    def __init__(self):
-        super().__init__("WALL", cooldown_frames=450, duration_frames=300)
-
-class Wall:
-    __slots__ = ('x', 'y', 'width', 'height', 'color', 'rect', 'lifetime', 'id', 'created_time')
-    WALL_DURATION = 5.0 
-
-    def __init__(self, x, y, wall_id):
-        self.x = x
-        self.y = y
-        self.width = 100
-        self.height = 10
-        self.color = (150, 150, 255)
-        self.rect = pygame.Rect(x, y, self.width, self.height)
-        self.id = wall_id
-        self.created_time = time.time()
-        self.lifetime = Wall.WALL_DURATION 
-
-    def draw(self, win, scroll):
-        screen_x = self.x - scroll[0]
-        screen_y = self.y - scroll[1]
-        time_left = self.created_time + self.WALL_DURATION - time.time()
-        alpha = 255
-        if time_left < 1.0: 
-            self.color = (255, 50, 50)
-            if (time.time() * 10) % 1.0 < 0.5: alpha = 100
-
-        wall_surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        wall_surf.fill((100, 100, 200, 150))
-        pygame.draw.rect(wall_surf, self.color, (0, 0, self.width, self.height), 2)
-        wall_surf.set_alpha(alpha)
-        win.blit(wall_surf, (screen_x, screen_y))
-
 class Player:
-    # ДОБАВЛЕНЫ: trail_color, outline_color
-    __slots__ = ('x', 'y', 'width', 'height', 'color', 'rect', 'vel', 'hp', 
-                'bullets', 'id', 'nickname', 'last_move', 'trail_particles', 
-                'is_respawning', 'is_dead', 'skin_id', 'abilities', 
-                'trail_color', 'outline_color')
-
     def __init__(self, x, y, width, height, color, p_id):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.color = color # Это Body Color
-        self.trail_color = color # По умолчанию след такой же как тело
-        self.outline_color = (255, 255, 255) # По умолчанию белый
-        
-        self.rect = pygame.Rect(x, y, width, height)
+        self.color = color
+        self.rect = (x, y, width, height)
         self.vel = 5
         self.hp = 100
         self.bullets = []
         self.id = p_id 
-        self.nickname = f"Игрок_{p_id}"
+        # --- НОВЫЕ СВОЙСТВА ДЛЯ НИКНЕЙМА И АНИМАЦИИ ---
+        self.nickname = f"Игрок_{p_id}" # Добавляем ник по умолчанию
         self.last_move = (0, 0) 
         self.trail_particles = []
         self.is_respawning = False
-        self.is_dead = False,
-        self.skin_id = "DEFAULT" 
-        self.abilities = {
-            "shield": ShieldAbility(),
-            "wall": WallAbility(),
-        }
-    
-    def cast_ability(self, ability_key):
-        if ability_key in self.abilities:
-            if self.abilities[ability_key].cooldown <= 0:
-                self.abilities[ability_key].cooldown = self.abilities[ability_key].cooldown_max
-                return True
-        return False
+        self.is_dead = False
 
     def draw(self, win, scroll):
         screen_x = self.x - scroll[0]
         screen_y = self.y - scroll[1]
 
-        if screen_x < -100 or screen_x > 2000 or screen_y < -100 or screen_y > 2000:
-            return
-
-        # 1. Trail Animation (Используем self.trail_color)
+        # 1. Анимация СЛЕДА (Trail)
         self._generate_trail_particles(screen_x, screen_y)
         self._draw_trail_particles(win)
         
-        # 2. Body Drawing
-        # Shadow
-        pygame.draw.rect(win, (20, 20, 20), (screen_x + 3, screen_y + 3, self.width, self.height))
-        # Body (Используем self.color)
-        pygame.draw.rect(win, self.color, (screen_x + 1, screen_y + 1, self.width - 2, self.height - 2))
-        # Outline (Используем self.outline_color)
-        pygame.draw.rect(win, self.outline_color, (screen_x, screen_y, self.width, self.height), 3)
-
-        # 3. Shield VFX
-        if self.abilities["shield"].duration > 0:
-            radius = self.width * 0.7
-            s = pygame.Surface((int(radius*2), int(radius*2)), pygame.SRCALPHA)
-            pygame.draw.circle(s, (0, 150, 255, 100), (int(radius), int(radius)), int(radius))
-            win.blit(s, (screen_x - radius + self.width//2, screen_y - radius + self.height//2))
-
-        # 4. HP Bar
-        hp_pct = self.hp / 100
-        hp_bar_w = int(self.width * hp_pct)
-        hp_color = (0, 255, 0) if self.hp > 30 else (255, 50, 50)
+        # 2. Основное тело (с небольшой анимацией "встряхивания" или "толчка")
+        # Тут можно было бы добавить смещение, но пока оставим статично.
         
+        # Тень
+        pygame.draw.rect(win, (20, 20, 20), (screen_x + 3, screen_y + 3, self.width, self.height))
+        
+        # Обводка (более яркая)
+        pygame.draw.rect(win, (255, 255, 255), (screen_x, screen_y, self.width, self.height), 3)
+        
+        # Основное тело
+        pygame.draw.rect(win, self.color, (screen_x + 1, screen_y + 1, self.width - 2, self.height - 2))
+
+        # 3. Полоска HP (Неоновый эффект)
+        hp_bar_w = self.width * (self.hp/100)
+        hp_color = (0, 255, 0) if self.hp > 30 else (255, 50, 50) # Красный при низком HP
+        
+        # Фон
         pygame.draw.rect(win, (50, 50, 50), (screen_x, screen_y - 15, self.width, 8))
+        # Заполнение (яркое)
         pygame.draw.rect(win, hp_color, (screen_x, screen_y - 15, hp_bar_w, 8))
+        # Неоновая обводка
         pygame.draw.rect(win, (255, 255, 255), (screen_x, screen_y - 15, self.width, 8), 1)
 
-        # Bullets
-        for bullet in self.bullets:
+        # 4. Пули (С неоновым следом)
+        for i, bullet in enumerate(self.bullets):
             bx = bullet[0] - scroll[0]
             by = bullet[1] - scroll[1]
+            
+            # Неоновый след
             pygame.draw.circle(win, (255, 200, 0), (int(bx-bullet[2]*2), int(by-bullet[3]*2)), 3)
             pygame.draw.circle(win, (255, 200, 0), (int(bx-bullet[2]*1), int(by-bullet[3]*1)), 4)
+            # Основная пуля
             pygame.draw.circle(win, (255, 255, 255), (int(bx), int(by)), 5)
             pygame.draw.circle(win, (255, 0, 0), (int(bx), int(by)), 3)
 
+
+    # --- НОВЫЕ МЕТОДЫ ДЛЯ ЧАСТИЦ СЛЕДА ---
     def _generate_trail_particles(self, screen_x, screen_y):
+        """Генерирует частицы на основе self.last_move (движения), которое синхронизируется по сети."""
         dx, dy = self.last_move
+        
+        # Генерируем частицы только если игрок движется
         if dx != 0 or dy != 0:
+            # Создаем частицы сзади (используем обратное направление движения)
+            # ... (логика расчета spawn_x/y и добавления частицы остается без изменений) ...
             spawn_x = screen_x + self.width // 2 + (-dx) * (self.width//2)
             spawn_y = screen_y + self.height // 2 + (-dy) * (self.height//2)
             
+            # Добавляем случайное смещение
             spawn_x += random.uniform(-10, 10)
             spawn_y += random.uniform(-10, 10)
 
+            # Размер и скорость затухания
             size = random.randint(3, 7)
             lifetime = random.randint(15, 30)
-            # ВАЖНО: сохраняем цвет частицы при создании
-            self.trail_particles.append([spawn_x, spawn_y, size, lifetime, self.trail_color])
+            # Цвет берем из цвета игрока
+            self.trail_particles.append([spawn_x, spawn_y, size, lifetime, self.color])
     
     def _draw_trail_particles(self, win):
         new_particles = []
-        rand_uniform = random.uniform
-        
         for p in self.trail_particles:
-            p[3] -= 1 
+            p[3] -= 1 # Уменьшаем время жизни (lifetime)
+            
             if p[3] > 0:
-                p[0] += rand_uniform(-0.5, 0.5)
-                p[1] += rand_uniform(-0.5, 0.5)
-                alpha = int(255 * (p[3] / 30))
-                alpha = max(0, min(255, alpha))
-                # Используем цвет из частицы (p[4]), который мы задали в _generate
-                s = get_particle_surf(p[2], p[4], alpha)
+                # Движение частицы (медленно дрейфует)
+                p[0] += random.uniform(-0.5, 0.5)
+                p[1] += random.uniform(-0.5, 0.5)
+                
+                # Вычисляем альфа-канал на основе времени жизни
+                alpha = int(255 * (p[3] / 30)) 
+                
+                # Рисуем частицу
+                s = pygame.Surface((p[2], p[2]), pygame.SRCALPHA)
+                
+                # Делаем цвет частицы более тусклым (эффект угасания)
+                r, g, b = p[4]
+                faded_color = (min(255, r + 50), min(255, g + 50), min(255, b + 50), alpha)
+                s.fill(faded_color)
+                
                 win.blit(s, (int(p[0]), int(p[1])))
                 new_particles.append(p)
+        
         self.trail_particles = new_particles
+    # --- КОНЕЦ НОВЫХ МЕТОДОВ ДЛЯ ЧАСТИЦ СЛЕДА ---
 
     def move(self, map_width, map_height):
         keys = pygame.key.get_pressed()
+        
+        # Храним информацию о движении для следа
         dx, dy = 0, 0
         if keys[pygame.K_a] and self.x > 0: 
-            self.x -= self.vel; dx = -1
+            self.x -= self.vel
+            dx = -1
+        # ... (остальная логика движения) ...
         if keys[pygame.K_d] and self.x < map_width - self.width: 
-            self.x += self.vel; dx = 1
+            self.x += self.vel
+            dx = 1
         if keys[pygame.K_w] and self.y > 0: 
-            self.y -= self.vel; dy = -1
+            self.y -= self.vel
+            dy = -1
         if keys[pygame.K_s] and self.y < map_height - self.height: 
-            self.y += self.vel; dy = 1
+            self.y += self.vel
+            dy = 1
         
+        # last_move обновляется всегда, даже если сервер его не использует, 
+        # при отправке Player по сети он будет содержать актуальное значение.
         self.last_move = (dx, dy) 
         self.update(map_width, map_height)
         
     def setPose(self, x, y):
         self.x = x
         self.y = y
-        self.update_rect()
+        return
 
     def update(self, map_width, map_height):
-        self.update_rect()
-        to_remove = []
+        self.rect = (self.x, self.y, self.width, self.height)
+        
+        # Вращение/движение пули (без изменений)
         for bullet in self.bullets:
             bullet[0] += bullet[2]
             bullet[1] += bullet[3]
-            if not (-100 < bullet[0] < map_width + 100 and -100 < bullet[1] < map_height + 100):
-                to_remove.append(bullet)
-        for b in to_remove: self.bullets.remove(b)
-
-    def update_rect(self):
-        self.rect.x = int(self.x)
-        self.rect.y = int(self.y)
-
+            if bullet[0] > map_width + 100 or bullet[0] < -100 or bullet[1] > map_height + 100 or bullet[1] < -100:
+                self.bullets.remove(bullet)
+                
     def deleteBullet(self, bullet):
-        if bullet in self.bullets: self.bullets.remove(bullet)
+        if bullet in self.bullets:
+            self.bullets.remove(bullet)
 
     def shoot(self, target_x, target_y, scroll=None):
+        # Если передан скролл (это Игрок кликает мышкой по экрану)
         if scroll:
             world_target_x = target_x + scroll[0]
             world_target_y = target_y + scroll[1]
+        # Если скролл НЕ передан (это Бот, он уже знает мировые координаты)
         else:
             world_target_x = target_x
             world_target_y = target_y
+
         center_x = self.x + self.width // 2
         center_y = self.y + self.height // 2
+        
         dx = world_target_x - center_x
         dy = world_target_y - center_y
         angle = math.atan2(dy, dx)
+        
         speed = 15 
         speed_x = speed * math.cos(angle)
         speed_y = speed * math.sin(angle)
-        spawn_dist = 45
-        spawn_x = center_x + (math.cos(angle) * spawn_dist)
-        spawn_y = center_y + (math.sin(angle) * spawn_dist)
+        
+        spawn_distance = 45
+        spawn_x = center_x + (math.cos(angle) * spawn_distance)
+        spawn_y = center_y + (math.sin(angle) * spawn_distance)
+        
         self.bullets.append([spawn_x, spawn_y, speed_x, speed_y])
         
     def respawn(self, map_width, map_height):
+        print(f"[RESPAWN] Игрок {self.nickname} респавнится.", self.x, self.y)
         self.hp = 100
+        # self.x = random.randint(100, map_width - 100)
+        # self.y = random.randint(100, map_height - 100)
+        print(self.x, self.y)
         self.bullets = [] 
         self.last_move = (0,0)
-        self.is_dead = False
-        self.is_respawning = False
+        self.is_dead = False # Возвращаем к жизни
+        self.is_respawning = False # НОВОЕ: Флаг для сервера
 
 class Bot(Player):
     def __init__(self, x, y, width, height, color, p_id):
@@ -266,12 +211,6 @@ class Bot(Player):
         closest_dist = float('inf')
         target = None
         my_center = (self.x + self.width//2, self.y + self.height//2)
-        
-        if self.hp <= 0:
-            self.x = random.randint(100, 2000 - 100)
-            self.y = random.randint(100, 2000 - 100)
-            self.hp = 100
-
         
         for p_id, p in all_players.items():
             if p.id != self.id and p.hp > 0: # Игнорируем мертвых

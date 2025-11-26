@@ -1,0 +1,27 @@
+{
+    "DEFAULT": {
+        "body_color": [0, 255, 255],
+        "trail_color": [0, 200, 200],
+        "outline_color": [255, 255, 255]
+    },
+    "RED_CYBORG": {
+        "body_color": [255, 50, 50],
+        "trail_color": [200, 0, 0],
+        "outline_color": [255, 200, 200]
+    },
+    "GOLD_ELITE": {
+        "body_color": [255, 215, 0],
+        "trail_color": [255, 165, 0],
+        "outline_color": [255, 255, 200]
+    },
+    "TOXIC_GREEN": {
+        "body_color": [50, 255, 50],
+        "trail_color": [0, 200, 0],
+        "outline_color": [200, 255, 200]
+    },
+    "VOID_WALKER": {
+        "body_color": [100, 0, 255],
+        "trail_color": [50, 0, 200],
+        "outline_color": [200, 100, 255]
+    }
+}

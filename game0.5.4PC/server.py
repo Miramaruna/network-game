@@ -4,12 +4,9 @@ import pickle
 import time
 import random
 import pygame
-import os
 from player import Player, Bot, Wall
 
-
-# server = "127.0.0.1" 
-server = "192.168.0.105"
+server = "192.168.0.105" 
 port = 5555
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -33,80 +30,51 @@ WALL_WIDTH = 100 # Added for clarity in the wall creation logic
 WALL_HEIGHT = 10
 
 def bot_simulation_thread():
-    """Bot logic loop, now handles ability updates and Wall collisions."""
-    global static_entities
-    
+    """Обновляет ботов и их стрельбу"""
     while True:
         try:
-            time.sleep(0.03) 
+            time.sleep(0.03) # ~30 FPS
+            
+            # Копируем список, чтобы избежать ошибки "dictionary changed size during iteration"
             current_players_list = list(players.items())
             
-            # --- 1. Update Abilities and Handle Bot Movement/Shooting ---
             for p_id, p in current_players_list:
+                # Если игрока уже нет в словаре (вышел), пропускаем
                 if p_id not in players: continue 
                 
-                # Update player/bot abilities (Server-authoritative cooldown/duration)
-                p.abilities["shield"].update()
-                p.abilities["wall"].update()
-
-                # Move Bot (Existing logic)
+                # 1. Если это бот — двигаем его
                 if isinstance(p, Bot):
                     p.ai_move(players, MAP_WIDTH, MAP_HEIGHT)
                 
-                # --- 2. Server-side Bullet Collision (for bots and players) ---
-                bullets_to_remove = []
-                # Check for walls blocking bullets (New)
-                for bullet in p.bullets:
-                    b_rect = pygame.Rect(bullet[0]-5, bullet[1]-5, 10, 10)
-                    
-                    # Check Bullet vs Wall collision
-                    wall_hit = False
-                    for wall in static_entities.values():
-                        if b_rect.colliderect(wall.rect):
-                            bullets_to_remove.append(bullet)
-                            wall_hit = True
-                            break
-                    if wall_hit: continue
-
-                    # Check Bullet vs Player collision (Only needed for Bot bullets here)
-                    if isinstance(p, Bot): # Only Bots need server-side bullet collision
+                # 2. Обработка пуль ЭТОГО объекта (и бота, и игрока)
+                # Сервер просчитывает попадания от пуль ботов
+                # (Для игроков это делает клиент, но мы можем добавить проверку и тут)
+                if isinstance(p, Bot): 
+                    bullets_to_remove = []
+                    for bullet in p.bullets:
+                        b_rect = pygame.Rect(bullet[0]-5, bullet[1]-5, 10, 10)
+                        
                         for target_id, target in players.items():
-                            # Shield check: If target has active shield, block damage
-                            if target_id != p_id and target.hp > 0 and target.abilities["shield"].duration <= 0:
-                                if b_rect.colliderect(target.rect):
+                            if target_id != p_id and target.hp > 0:
+                                t_rect = pygame.Rect(target.x, target.y, target.width, target.height)
+                                if b_rect.colliderect(t_rect):
                                     bullets_to_remove.append(bullet)
+                                    
+                                    # УРОН НА СЕРВЕРЕ
                                     target.hp -= 10
                                     
                                     if target.hp <= 0:
                                         chat_log.append(f"[KILL] {p.nickname} уничтожил {target.nickname}!")
-                                        # target.respawn(MAP_WIDTH, MAP_HEIGHT)
-                                    break
-                
-                for b in bullets_to_remove:
-                    if b in p.bullets: p.bullets.remove(b)
+                                        target.respawn(MAP_WIDTH, MAP_HEIGHT)
+                                        target.x = random.randint(100, MAP_WIDTH - 100)
+                                        target.y = random.randint(100, MAP_HEIGHT - 100)
+                                        
+                    
+                    for b in bullets_to_remove:
+                        if b in p.bullets: p.bullets.remove(b)
 
-            
-                
         except Exception as e:
             print(f"[BOT THREAD ERROR]: {e}")
-            
-def server_works():
-    # print("SERVER WORKS THREAD STARTED")
-    # clock = pygame.time.Clock()
-    
-    # while True:
-        # print("SERVER TICK")
-        # clock.tick(1)
-        
-        walls_to_remove = []
-        for w_id, wall in static_entities.items():
-            if time.time() - wall.created_time >= Wall.WALL_DURATION:
-                walls_to_remove.append(w_id)
-                
-        # print(walls_to_remove)
-                
-        for w_id in walls_to_remove:
-            del static_entities[w_id]
 
 def threaded_client(conn, player_id):
     global chat_log, current_id, static_entities, wall_id_counter
@@ -123,33 +91,26 @@ def threaded_client(conn, player_id):
             new_msg = data.get("msg")
             hit_data = data.get("hits", []) 
             ability_cast = data.get("ability_cast") # NEW: Ability cast request
-            player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
             
             if p_obj:
                 if player_id in players:
                     # Preserve server-side HP, abilities, and Wall status
                     current_hp = players[player_id].hp
                     current_abilities = players[player_id].abilities
-                    # current_nickname = players[player_id].nickname
-                    current_skin_id = players[player_id].skin_id  # Сохраняем скин
                     
                     players[player_id] = p_obj 
                     players[player_id].hp = current_hp
-                    players[player_id].abilities = current_abilities
-                    players[player_id].nickname = player_nick
-                    players[player_id].skin_id = current_skin_id  # Восстанавливаем скин
+                    players[player_id].abilities = current_abilities # Preserve server-side ability state
                     
                     # Ensure the server-side rect is updated immediately
                     players[player_id].update_rect()
-                    
-                    server_works()
                     
                     # Respawn check (Existing logic)
                     if p_obj.hp <= 0:
                         server_p = players[player_id] 
                         server_p.x = random.randint(100, MAP_WIDTH - 100)
                         server_p.y = random.randint(100, MAP_HEIGHT - 100)
-                        p_obj.respawn(MAP_WIDTH, MAP_HEIGHT)
+                        # p_obj.respawn(MAP_WIDTH, MAP_HEIGHT)
 
             for hit in hit_data:
                 target_id = hit["target_id"]
@@ -187,6 +148,7 @@ def threaded_client(conn, player_id):
                 elif ability_key == "shield":
                     players[player_id].abilities["shield"].activate(players[player_id])
 
+            player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
             if new_msg:
                 if new_msg.startswith("/bot"):
                     msgCount = new_msg.split()
@@ -212,8 +174,6 @@ def threaded_client(conn, player_id):
     conn.close()
 
 start_new_thread(bot_simulation_thread, ())
-# start_new_thread(server_works())
-# server_works()
 
 while True:
     conn, addr = s.accept()
