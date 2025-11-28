@@ -1,75 +1,32 @@
-import socket
-import pickle
+from tkinter import tk
 
-class Network:
-    def __init__(self, server_ip):
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server = server_ip
-        self.port = 5555
-        self.addr = (self.server, self.port)
-        
-        # --- DEBUG STATS ---
-        self.traffic_stats = {
-            "sent_total": 0,
-            "recv_total": 0,
-            "last_packet_size": 0,
-            "packets_sent": 0
-        }
-        
-        self.p = self.connect()
+root = tk.Tk()
+root.title('Крестики нолики')
 
-    def getP(self):
-        return self.p
+buttons = [[None for _ in range(3)] for _ in range(3)]
 
-    def connect(self):
-        try:
-            self.client.settimeout(5)
-            self.client.connect(self.addr)
-            raw_data = self.client.recv(4096)
-            self.traffic_stats["recv_total"] += len(raw_data)
-            return pickle.loads(raw_data)
-        except (socket.timeout, ConnectionRefusedError, socket.gaierror):
-            print(f"Connection failed: Server not reachable at {self.server}:{self.port}")
-            self.disconnect() 
-            return None
-        except Exception as e:
-            print(f"Unexpected error during connection: {e}")
-            self.disconnect()
-            return None
+def check_winner():
+    for i in range(3):
+        if buttons[i][0]["text"] == buttons[i][1]["text"] == buttons[i][2]["text"] != "":
+            return buttons[i][0]["text"]
+        if buttons[0][i]["text"] == buttons[1][i]["text"] == buttons[2][i]["text"] != "":
+            return buttons[0][i]["text"]
+    if buttons[0][0]["text"] == buttons[1][1]["text"] == buttons[2][2]["text"] != "":
+        return buttons[0][0]["text"]
+    if buttons[0][2]["text"] == buttons[1][1]["text"] == buttons[2][0]["text"] != "":
+        return buttons[0][2]["text"]
+    return None
 
-    def send(self, data):
-        try:
-            # Сначала сериализуем, чтобы посчитать размер
-            serialized_data = pickle.dumps(data)
-            data_size = len(serialized_data)
-            
-            # Обновляем статистику
-            self.traffic_stats["sent_total"] += data_size
-            self.traffic_stats["last_packet_size"] = data_size
-            self.traffic_stats["packets_sent"] += 1
-            
-            # Отправляем
-            self.client.send(serialized_data)
-            
-            # Получаем ответ
-            reply_data = self.client.recv(4096 * 32) 
-            self.traffic_stats["recv_total"] += len(reply_data)
-            
-            if not reply_data:
-                raise ConnectionAbortedError("Server closed connection.")
-                
-            return pickle.loads(reply_data)
-            
-        except (ConnectionResetError, ConnectionAbortedError, socket.error) as e:
-            print(f"Network error (graceful exit required): {e}")
-            return "NETWORK_FAILURE"
+def make_move(row, col):
+    global current_player
+    if buttons[row][col]["text"] == "":
+        buttons[row][col]["text"] = current_player
+        current_player = "O" if current_player == "X" else "X"
 
-        except Exception as e:
-            print(f"Serialization or other critical error: {e}")
-            return "NETWORK_FAILURE"
-            
-    def disconnect(self):
-        try:
-            self.client.close()
-        except Exception as e:
-            print(f"Error closing socket: {e}")
+
+for i in range(3):
+    for j in range(3):
+        buttons[i][j] = tk.Button(root, text="", font=("Arial", 24), width=5, height=2)
+        buttons[i][j].grid(row=i, column=j)
+
+root.mainloop()
