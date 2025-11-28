@@ -127,14 +127,22 @@ def bot_simulation_thread():
             print(f"[BOT THREAD ERROR]: {e}")
             
 def server_works():
-    """Handles timed events like Wall expiration."""
-    walls_to_remove = []
-    for w_id, wall in static_entities.items():
-        if time.time() - wall.created_time >= Wall.WALL_DURATION:
-            walls_to_remove.append(w_id)
+    # print("SERVER WORKS THREAD STARTED")
+    # clock = pygame.time.Clock()
+    
+    # while True:
+        # print("SERVER TICK")
+        # clock.tick(1)
+        
+        walls_to_remove = []
+        for w_id, wall in static_entities.items():
+            if time.time() - wall.created_time >= Wall.WALL_DURATION:
+                walls_to_remove.append(w_id)
                 
-    for w_id in walls_to_remove:
-        del static_entities[w_id]
+        # print(walls_to_remove)
+                
+        for w_id in walls_to_remove:
+            del static_entities[w_id]
 
 def threaded_client(conn, player_id):
     global chat_log, current_id, static_entities, wall_id_counter
@@ -149,7 +157,6 @@ def threaded_client(conn, player_id):
             
             # --- НОВЫЙ КОД НАЧАЛО: Обработка пакета инициализации ---
             if isinstance(data, dict) and data.get("type") == "INIT":
-                print("Получен INIT пакет от игрока", player_id)
                 skin_to_set = data.get("skin", "DEFAULT")
                 nick_to_set = data.get("nick", f"Игрок {player_id}")
                 
@@ -168,7 +175,7 @@ def threaded_client(conn, player_id):
             new_msg = data.get("msg")
             hit_data = data.get("hits", []) 
             ability_cast = data.get("ability_cast") # NEW: Ability cast request
-            # player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
+            player_nick = getattr(p_obj, 'nickname', f"Игрок {player_id}")
             
             if p_obj:
                 if player_id in players:
@@ -176,14 +183,14 @@ def threaded_client(conn, player_id):
                     current_hp = players[player_id].hp
                     current_abilities = players[player_id].abilities
                     # current_nickname = players[player_id].nickname
-                    # current_skin_id = players[player_id].skin_id  # Сохраняем скин
-                    # print(f"Обновление игрока {player_id}: HP={current_hp}, Abilities={current_abilities}")
+                    current_skin_id = players[player_id].skin_id  # Сохраняем скин
+                    print(f"Обновление игрока {player_id}: HP={current_hp}, Abilities={current_abilities}, SkinID={current_skin_id}")
                     
                     players[player_id] = p_obj 
                     players[player_id].hp = current_hp
                     players[player_id].abilities = current_abilities
-                    # players[player_id].nickname = player_nick
-                    # players[player_id].skin_id = current_skin_id  # Восстанавливаем скин
+                    players[player_id].nickname = player_nick
+                    players[player_id].skin_id = current_skin_id  # Восстанавливаем скин
                     
                     # Ensure the server-side rect is updated immediately
                     players[player_id].update_rect()
@@ -243,7 +250,7 @@ def threaded_client(conn, player_id):
                         players[bot_id] = Bot(random.randint(100,1000), random.randint(100,1000), 50, 50, (255,0,0), bot_id)
                         chat_log.append(f"[SERVER] Бот создан!")
                 else:
-                    chat_log.append(f"{players[player_id].nickname}: {new_msg}")
+                    chat_log.append(f"{player_nick}: {new_msg}")
                 if len(chat_log) > 20: chat_log.pop(0)
 
             reply = {"players": players, "chat": chat_log, "walls": static_entities} # NEW: Include walls

@@ -289,7 +289,7 @@ def game_loop(server_ip, nickname, selected_skin):
     last_walls = {}
 
     while run:
-        clock.tick(360)
+        clock.tick(60)
         msg_to_send = None 
         ability_to_cast = None
         
