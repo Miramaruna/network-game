@@ -37,6 +37,7 @@ def udp_broadcast_listener():
     """Слушает широковещательные запросы и отвечает на них"""
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # SO_BROADCAST нужен для отправки, но для приема достаточно bind
     try:
         udp_sock.bind(('', BROADCAST_PORT))
     except Exception as e:
@@ -54,11 +55,8 @@ def udp_broadcast_listener():
                 continue
                 
             if data == MAGIC_MESSAGE:
-                # ФИЛЬТР: Считаем только реальных игроков (не ботов)
-                real_players_count = len([p for p in players.values() if not isinstance(p, Bot)])
-                
                 # Отвечаем: NEON_SERVER|ServerName|PlayerCount
-                response = f"NEON_SERVER|Neon Arena|{real_players_count}".encode('utf-8')
+                response = f"NEON_SERVER|Neon Arena|{len(players)}".encode('utf-8')
                 udp_sock.sendto(response, addr)
         except Exception as e:
             if server_running: print(f"[UDP Error] {e}")
@@ -165,19 +163,13 @@ def threaded_client(conn, player_id):
                         chat_log.append(f"[KILL] {players[player_id].nickname} -> {target.nickname}")
 
             if ability_cast and player_id in players:
-                ability_key = ability_cast["key"]
-                
-                if ability_key == "wall":
-                    # Activation: Tries to activate ability on server
+                if ability_cast["key"] == "wall":
                     if players[player_id].abilities["wall"].activate(players[player_id]):
                         wall_id_counter += 1
-                        # Wall spawns at player's current location (center)
-                        w_x = players[player_id].x + players[player_id].width//2 - WALL_WIDTH//2 # assuming WALL_WIDTH is defined in Wall class
-                        w_y = players[player_id].y + players[player_id].height + 5 # Spawn slightly in front
+                        w_x = players[player_id].x + players[player_id].width//2 - WALL_WIDTH//2
+                        w_y = players[player_id].y + players[player_id].height + 5
                         static_entities[wall_id_counter] = Wall(w_x, w_y, wall_id_counter)
-                        chat_log.append(f"[ABILITY] {players[player_id].nickname} создал СТЕНУ!")
-                
-                elif ability_key == "shield":
+                elif ability_cast["key"] == "shield":
                     players[player_id].abilities["shield"].activate(players[player_id])
 
             if new_msg:
@@ -188,7 +180,6 @@ def threaded_client(conn, player_id):
                         bot_id = current_id + 1000
                         current_id += 1
                         players[bot_id] = Bot(random.randint(100,1000), random.randint(100,1000), 50, 50, (255,0,0), bot_id)
-                        chat_log.append(f"[SERVER] Бот создан!")
                 else:
                     chat_log.append(f"{players[player_id].nickname}: {new_msg}")
                 if len(chat_log) > 20: chat_log.pop(0)
