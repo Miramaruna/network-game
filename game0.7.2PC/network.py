@@ -14,26 +14,15 @@ class Network:
         self.port = 5555
         self.addr = (self.server, self.port)
         
-        # --- TELEMETRY & STATS ---
-        self.latency = 0  # Ping в мс
-        self.last_time_check = time.time()
-        
+        # --- DEBUG STATS ---
         self.traffic_stats = {
             "sent_total": 0,
             "recv_total": 0,
-            "sent_per_sec": 0,    # New: KB/s upload
-            "recv_per_sec": 0,    # New: KB/s download
-            "last_packet_size_sent": 0,
-            "last_packet_size_recv": 0,
+            "last_packet_size_sent": 0, # Добавлено
+            "last_packet_size_recv": 0, # Добавлено
             "packets_sent": 0,
-            "packets_recv": 0,
+            "packets_recv": 0,          # Добавлено
         }
-        
-        # Временные счетчики для расчета скорости в секунду
-        self._temp_sent = 0
-        self._temp_recv = 0
-        self._temp_packets_sent = 0
-        self._temp_packets_recv = 0
         
         self.p = self.connect()
 
@@ -44,76 +33,54 @@ class Network:
         try:
             self.client.settimeout(5)
             self.client.connect(self.addr)
-            raw_data = self.client.recv(8192) # Увеличил буфер инициализации
+            raw_data = self.client.recv(4096)
             self.traffic_stats["recv_total"] += len(raw_data)
             return pickle.loads(raw_data)
+        except (socket.timeout, ConnectionRefusedError, socket.gaierror):
+            print(f"Connection failed: Server not reachable at {self.server}:{self.port}")
+            self.disconnect() 
+            return None
         except Exception as e:
-            print(f"Connection failed: {e}")
+            print(f"Unexpected error during connection: {e}")
             self.disconnect()
             return None
 
-    def _update_rates(self):
-        """Обновляет показатели скорости раз в секунду"""
-        now = time.time()
-        diff = now - self.last_time_check
-        if diff >= 1.0:
-            self.traffic_stats["sent_per_sec"] = self._temp_sent / diff / 1024 # KB/s
-            self.traffic_stats["recv_per_sec"] = self._temp_recv / diff / 1024 # KB/s
-            self._temp_sent = 0
-            self._temp_recv = 0
-            self.last_time_check = now
-
     def send(self, data):
         try:
-            start_time = time.perf_counter() # Начало замера пинга
-
-            # Сериализация
+            # Сначала сериализуем, чтобы посчитать размер
             serialized_data = pickle.dumps(data)
             data_size = len(serialized_data)
             
-            # Статистика отправки
+            # Обновляем статистику
             self.traffic_stats["sent_total"] += data_size
             self.traffic_stats["last_packet_size_sent"] = data_size
             self.traffic_stats["packets_sent"] += 1
-            self._temp_sent += data_size
             
-            # Отправка
-            self.client.sendall(serialized_data) # sendall надежнее чем send
+            # Отправляем
+            self.client.send(serialized_data)
             
-            # Получение
-            reply_data = self.client.recv(4096 * 32)
-            recv_size = len(reply_data)
+            # Получаем ответ
+            reply_data = self.client.recv(4096 * 32) 
+            self.traffic_stats["recv_total"] += len(reply_data)
             
-            end_time = time.perf_counter() # Конец замера
-            
-            # Расчет пинга (RTT)
-            self.latency = (end_time - start_time) * 1000 # перевод в мс
-
-            # Статистика приема
-            self.traffic_stats["recv_total"] += recv_size
-            self.traffic_stats["last_packet_size_recv"] = recv_size
-            self.traffic_stats["packets_recv"] += 1
-            self._temp_recv += recv_size
-            
-            self._update_rates() # Проверка, прошла ли секунда
-
             if not reply_data:
-                raise ConnectionAbortedError("Empty reply")
+                raise ConnectionAbortedError("Server closed connection.")
                 
             return pickle.loads(reply_data)
             
-        except socket.error as e:
-            print(f"Network Error: {e}")
+        except (ConnectionResetError, ConnectionAbortedError, socket.error) as e:
+            print(f"Network error (graceful exit required): {e}")
             return "NETWORK_FAILURE"
+
         except Exception as e:
-            print(f"Critical Error: {e}")
+            print(f"Serialization or other critical error: {e}")
             return "NETWORK_FAILURE"
             
     def disconnect(self):
         try:
             self.client.close()
-        except:
-            pass
+        except Exception as e:
+            print(f"Error closing socket: {e}")
             
 class LANScanner:
     @staticmethod

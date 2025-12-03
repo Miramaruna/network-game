@@ -5,7 +5,6 @@ import time
 
 # --- CACHE (Оставляем как было) ---
 PARTICLE_SURF_CACHE = {}
-C_NEON_CYAN = (0, 255, 255)
 
 def get_particle_surf(size, color, alpha):
     # Преобразуем список цветов в кортеж, чтобы использовать как ключ словаря
@@ -142,46 +141,13 @@ class Player:
             win.blit(s, (screen_x - radius + self.width//2, screen_y - radius + self.height//2))
 
         # 4. HP Bar
-        # hp_pct = self.hp / 100
-        # hp_bar_w = int(self.width * hp_pct)
-        # hp_color = (0, 255, 0) if self.hp > 30 else (255, 50, 50)
+        hp_pct = self.hp / 100
+        hp_bar_w = int(self.width * hp_pct)
+        hp_color = (0, 255, 0) if self.hp > 30 else (255, 50, 50)
         
-        # pygame.draw.rect(win, (50, 50, 50), (screen_x, screen_y - 15, self.width, 8))
-        # pygame.draw.rect(win, hp_color, (screen_x, screen_y - 15, hp_bar_w, 8))
-        # pygame.draw.rect(win, (255, 255, 255), (screen_x, screen_y - 15, self.width, 8), 1)
-        
-        hp_pct = max(0, self.hp / 100)
-        hp_bar_w = self.width + 10 
-        hp_bar_h = 6
-        
-        # Центрирование над игроком
-        bar_x = screen_x - 5 
-        bar_y = screen_y - 15
-        
-        # Черная подложка
-        pygame.draw.rect(win, (0, 0, 0), (bar_x, bar_y, hp_bar_w, hp_bar_h))
-        
-        # Цвет (Зеленый -> Желтый -> Красный)
-        col = (0, 255, 0)
-        if hp_pct < 0.6: col = (255, 255, 0)
-        if hp_pct < 0.3: col = (255, 0, 0)
-        
-        # Сама полоска
-        pygame.draw.rect(win, col, (bar_x, bar_y, int(hp_bar_w * hp_pct), hp_bar_h))
-        
-        # Тонкая неоновая рамка
-        pygame.draw.rect(win, C_NEON_CYAN, (bar_x, bar_y, hp_bar_w, hp_bar_h), 1)
-        
-        # Цвет (Зеленый -> Желтый -> Красный)
-        col = (0, 255, 0)
-        if hp_pct < 0.6: col = (255, 255, 0)
-        if hp_pct < 0.3: col = (255, 0, 0)
-        
-        # Сама полоска
-        pygame.draw.rect(win, col, (bar_x, bar_y, int(hp_bar_w * hp_pct), hp_bar_h))
-        
-        # Тонкая рамка
-        pygame.draw.rect(win, (255, 255, 255), (bar_x, bar_y, hp_bar_w, hp_bar_h), 1)
+        pygame.draw.rect(win, (50, 50, 50), (screen_x, screen_y - 15, self.width, 8))
+        pygame.draw.rect(win, hp_color, (screen_x, screen_y - 15, hp_bar_w, 8))
+        pygame.draw.rect(win, (255, 255, 255), (screen_x, screen_y - 15, self.width, 8), 1)
 
         # Bullets
         for bullet in self.bullets:

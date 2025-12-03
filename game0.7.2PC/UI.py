@@ -19,9 +19,8 @@ C_GRID_BRIGHT = (60, 60, 100)
 class DebugInterface:
     def __init__(self):
         self.active = False
-        self.bg_surf = pygame.Surface((320, 260), pygame.SRCALPHA) # Чуть увеличил размер
+        self.bg_surf = pygame.Surface((300, 220), pygame.SRCALPHA)
         self.bg_surf.fill((0, 0, 0, 200)) 
-        pygame.draw.rect(self.bg_surf, C_NEON_CYAN, self.bg_surf.get_rect(), 2, border_radius=5)
 
     def toggle(self):
         self.active = not self.active
@@ -31,37 +30,37 @@ class DebugInterface:
         if not self.active:
             return
 
+        # Рисуем полупрозрачный фон
         win.blit(self.bg_surf, (10, 10))
-        
-        # Цвет пинга
-        # ping = int(network_obj.latency)
-        ping = max(0, int(network_obj.latency))
-        ping_col = (0, 255, 0) if ping < 60 else (255, 255, 0) if ping < 120 else (255, 0, 0)
 
+        # Текущее время
+        time_ms = int(pygame.time.get_ticks() / 1000)
+        
+        # Данные для отображения
         stats_lines = [
-            f"--- SYSTEM ---",
+            f"TIME: {time_ms}s",
             f"FPS: {int(fps)}",
-            f"PING: {ping} ms",  # PING HERE
-            f"ENTITIES: {len(players)}",
-            f"--- PLAYER ---",
             f"POS: ({int(p.x)}, {int(p.y)})",
-            f"HP: {p.hp}",
-            f"--- NETWORK ---",
-            f"UP: {network_obj.traffic_stats['sent_per_sec']:.1f} KB/s",
-            f"DOWN: {network_obj.traffic_stats['recv_per_sec']:.1f} KB/s",
-            f"TOTAL SENT: {network_obj.traffic_stats['sent_total'] / 1024:.1f} KB", # Поправил на MB если число большое, но пока оставим KB
-            f"PACKET SIZE: {network_obj.traffic_stats['last_packet_size_recv']} B",
+            f"HEALTH: {p.hp}",
+            f"PLAYERS: {len(players)}",
+            # --- НОВАЯ СТАТИСТИКА ТРАФИКА ---
+            "--- NETWORK STATS ---",
+            f"PACKETS SENT: {network_obj.traffic_stats['packets_sent']}",
+            f"PACKETS RECV: {network_obj.traffic_stats['packets_recv']}",
+            f"SENT TOTAL: {network_obj.traffic_stats['sent_total'] / 1024:.2f} KB",
+            f"RECV TOTAL: {network_obj.traffic_stats['recv_total'] / 1024:.2f} KB",
+            f"LAST SEND SIZE: {network_obj.traffic_stats['last_packet_size_sent']} B",
+            f"LAST RECV SIZE: {network_obj.traffic_stats['last_packet_size_recv']} B",
+            # ---------------------------------
         ]
 
         y_offset = 20
-        for line in stats_lines:
-            col = ping_col if "PING" in line else (0, 255, 0)
-            if "---" in line: col = C_NEON_CYAN
+        # for line in stats_lines:
+        #     self.font.render_to(win, (20, 10 + y_offset), line, C_TEXT_MAIN)
+        #     y_offset += 20
             
-            # Рендер текста
-            # txt = FONT_DEBUG.render(line, True, col)
-            # win.blit(txt, (25, 10 + y_offset))
-            FONT_DEBUG.render_to(win, (25, 10 + y_offset), line, col)
+        for line in stats_lines:
+            FONT_DEBUG.render_to(win, (20 + 10, y_offset), line, (0, 255, 0))
             y_offset += 18
 
 FONT_BIG   = get_font("impact, verendana, arial black", 70)
@@ -214,76 +213,3 @@ def draw_vignette(surface):
             if alpha > 40:
                 vignette_surf.set_at((x, y), (0, 0, 0, alpha))
                 
-
-def draw_cyber_health(surface, x, y, w, h, current_hp, max_hp=100, anim_hp=None):
-    """
-    Рисует стилизованный Health Bar.
-    anim_hp - это 'медленное' здоровье для эффекта получения урона.
-    """
-    if anim_hp is None: anim_hp = current_hp
-    
-    pct = max(0, min(1, current_hp / max_hp))
-    anim_pct = max(0, min(1, anim_hp / max_hp))
-    
-    # 1. Подложка (Background)
-    # Делаем скошенные углы
-    rect_bg = pygame.Rect(x, y, w, h)
-    pygame.draw.rect(surface, (20, 20, 30), rect_bg, border_radius=4)
-    
-    # 2. Анимированный урон (Красный шлейф)
-    if anim_hp > current_hp:
-        w_anim = int(w * anim_pct)
-        pygame.draw.rect(surface, (200, 50, 50), (x, y, w_anim, h), border_radius=4)
-
-    # 3. Основное здоровье (Градиент или Solid)
-    w_curr = int(w * pct)
-    
-    # Выбор цвета в зависимости от HP
-    main_col = C_NEON_GREEN
-    if pct < 0.5: main_col = (255, 200, 0)
-    if pct < 0.25: main_col = C_DANGER
-    
-    if w_curr > 0:
-        # Рисуем полоску
-        hp_rect = pygame.Rect(x, y, w_curr, h)
-        pygame.draw.rect(surface, main_col, hp_rect, border_radius=4)
-        
-        # Эффект "блика" сверху
-        pygame.draw.rect(surface, (255, 255, 255, 100), (x, y, w_curr, h//3), border_radius=4)
-
-    # 4. Сетка / Сегменты (Grid lines)
-    # Рисуем черные вертикальные линии каждые 10%
-    for i in range(1, 10):
-        lx = x + (w * (i/10))
-        pygame.draw.line(surface, (0, 0, 0), (lx, y), (lx, y+h), 2)
-
-    # 5. Рамка (Border)
-    pygame.draw.rect(surface, (255, 255, 255), rect_bg, 2, border_radius=4)
-    
-    # 6. Текст
-    hp_text = f"{int(current_hp)} / {max_hp}"
-    # txt_surf = FONT_HUD.render(hp_text, True, (255, 255, 255))
-    # # Тень текста
-    # shadow = FONT_HUD.render(hp_text, True, (0, 0, 0))
-    
-    # # Центрируем текст
-    # tx = x + w//2 - txt_surf.get_width()//2
-    # ty = y + h//2 - txt_surf.get_height()//2
-    
-    # surface.blit(shadow, (tx+1, ty+1))
-    # surface.blit(txt_surf, (tx, ty))
-    
-    # FONT_HUD.render возвращает (Surface, Rect). Распаковываем!
-    txt_surf, txt_rect = FONT_HUD.render(hp_text, (255, 255, 255))
-    shadow_surf, shadow_rect = FONT_HUD.render(hp_text, (0, 0, 0))
-
-    # Получаем размер текста
-    text_w, text_h = txt_surf.get_size()
-    
-    # Центрируем текст
-    tx = x + w//2 - text_w//2
-    ty = y + h//2 - text_h//2
-    
-    # Рисуем тень и основной текст
-    surface.blit(shadow_surf, (tx+2, ty+2)) 
-    surface.blit(txt_surf, (tx, ty))

@@ -8,7 +8,6 @@ import threading
 from network import Network, LANScanner 
 import server
 import pygame.freetype 
-# from UI import DebugInterface, NeonButton, NeonInput, draw_modern_grid, draw_custom_cursor, draw_cyber_health, draw_text_freetype
 from UI import *
 
 # --- Инициализация ---
@@ -353,8 +352,6 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
     shoot_flash = 0
     flash_pos = (0,0)
     
-    displayed_hp = p.hp
-    
     # --- DEBUG INIT ---
     debug_ui = DebugInterface()
     
@@ -373,16 +370,6 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
         # --- СОБЫТИЯ ---
         msg_to_send = None
         ability_to_cast = None
-        
-        if p.hp > 0:
-            if displayed_hp > p.hp:
-                # Плавное "утекание" здоровья (эффект задержки)
-                displayed_hp -= (displayed_hp - p.hp) * 0.1 
-            elif displayed_hp < p.hp:
-                # Быстрое восстановление (если здоровье восстановилось)
-                displayed_hp += 1 
-            # Ограничение
-            displayed_hp = max(p.hp, displayed_hp)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: run = False
@@ -537,26 +524,19 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
         # --- HUD (КРАСИВЫЙ) ---
         
         # 1. HP Bar (снизу по центру, большой)
-        # bar_w = 400
-        # bar_x = WIDTH//2 - bar_w//2
-        # bar_y = HEIGHT - 50
+        bar_w = 400
+        bar_x = WIDTH//2 - bar_w//2
+        bar_y = HEIGHT - 50
         
-        # # Подложка
-        # pygame.draw.rect(win, (20, 20, 20), (bar_x, bar_y, bar_w, 20), border_radius=10)
-        # # HP
-        # hp_pct = max(0, p.hp / 100)
-        # hp_col = C_NEON_GREEN if hp_pct > 0.4 else C_DANGER
-        # pygame.draw.rect(win, hp_col, (bar_x, bar_y, int(bar_w*hp_pct), 20), border_radius=10)
-        # # Рамка
-        # pygame.draw.rect(win, (255, 255, 255), (bar_x, bar_y, bar_w, 20), 2, border_radius=10)
-        # FONT_SMALL.render_to(win, (bar_x + bar_w//2 - 20, bar_y + 2), f"{p.hp}%", (0,0,0))
-        
-        bar_w = 300
-        bar_h = 35
-        bar_x = WIDTH // 2 - bar_w // 2
-        bar_y = HEIGHT - 60
-        
-        draw_cyber_health(win, bar_x, bar_y, bar_w, bar_h, p.hp, 100, displayed_hp)
+        # Подложка
+        pygame.draw.rect(win, (20, 20, 20), (bar_x, bar_y, bar_w, 20), border_radius=10)
+        # HP
+        hp_pct = max(0, p.hp / 100)
+        hp_col = C_NEON_GREEN if hp_pct > 0.4 else C_DANGER
+        pygame.draw.rect(win, hp_col, (bar_x, bar_y, int(bar_w*hp_pct), 20), border_radius=10)
+        # Рамка
+        pygame.draw.rect(win, (255, 255, 255), (bar_x, bar_y, bar_w, 20), 2, border_radius=10)
+        FONT_SMALL.render_to(win, (bar_x + bar_w//2 - 20, bar_y + 2), f"{p.hp}%", (0,0,0))
         
         # 2. Abilities (Слева и справа от HP)
         # Shield (Key 1)
