@@ -31,22 +31,22 @@ def setup_environment():
     print(f"--- Установка библиотек: {', '.join(REQUIRED_PACKAGES)}...")
     subprocess.check_call([venv_python, "-m", "pip", "install"] + REQUIRED_PACKAGES)
 
-def run_game():
-    venv_python = get_venv_python()
-    # Путь к главной функции твоей игры
-    game_script = os.path.join("game", "main.py") 
+# def run_game():
+#     venv_python = get_venv_python()
+#     # Путь к главной функции твоей игры
+#     game_script = os.path.join("game", "main.py") 
     
-    if os.path.exists(game_script):
-        print(f"--- Запуск игры: {game_script}")
-        # Запускаем игру через python из виртуальной среды
-        subprocess.run([venv_python, game_script])
-    else:
-        print(f"Ошибка: Файл {game_script} не найден!")
+#     if os.path.exists(game_script):
+#         print(f"--- Запуск игры: {game_script}")
+#         # Запускаем игру через python из виртуальной среды
+#         subprocess.run([venv_python, game_script])
+#     else:
+#         print(f"Ошибка: Файл {game_script} не найден!")
 
 if __name__ == "__main__":
     try:
         setup_environment()
         print("\n[Окружение готово]\n")
-        run_game()
+        # run_game()
     except Exception as e:
         print(f"Произошла ошибка: {e}")
