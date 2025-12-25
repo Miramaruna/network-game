@@ -5,6 +5,7 @@ import pickle
 import time
 import random
 import pygame
+import struct
 import sys
 from player import Player, Bot, Wall
 
@@ -126,8 +127,24 @@ def threaded_client(conn, player_id):
     
     while server_running:
         try:
-            data = pickle.loads(conn.recv(4096*32))
-            if not data: break
+            # data = pickle.loads(conn.recv(4096*32))
+            # if not data: break
+            
+            header = conn.recv(4)
+            if not header: break
+            
+            msg_len = struct.unpack('>I', header)[0]
+            
+            # 2. Читаем сами данные
+            chunks = []
+            bytes_recd = 0
+            while bytes_recd < msg_len:
+                chunk = conn.recv(min(msg_len - bytes_recd, 8192))
+                if not chunk: break
+                chunks.append(chunk)
+                bytes_recd += len(chunk)
+            
+            data = pickle.loads(b''.join(chunks))
             
             if isinstance(data, dict) and data.get("type") == "INIT":
                 players[player_id].skin_id = data.get("skin", "DEFAULT")
@@ -248,7 +265,10 @@ def threaded_client(conn, player_id):
                 last_chat_index = current_chat_len
 
             # reply = {"players": players, "chat": chat_log, "walls": static_entities}
-            conn.sendall(pickle.dumps(reply))
+            # conn.sendall(pickle.dumps(reply))
+            reply_serialized = pickle.dumps(reply)
+            reply_len = struct.pack('>I', len(reply_serialized))
+            conn.sendall(reply_len + reply_serialized)
             
         except Exception as e:
             break
