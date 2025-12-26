@@ -33,7 +33,7 @@ win = None
 MAP_WIDTH = 2000
 MAP_HEIGHT = 2000
 
-fps = 60
+fps = 320
 
 RESOLUTIONS = [
     (800, 600),

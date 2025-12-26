@@ -63,14 +63,8 @@ class NeonButton(UIElement):
         super().__init__(x, y, w, h)
         self.text = text
         self.base_color = color
-        self.text = text
-        self.font = FONT_MED
-        self.color = color
-        
-        self._pre_render()
 
     def draw(self, surface):
-        
         scale_w = self.rect.w + (10 * self.anim_progress)
         scale_h = self.rect.h + (4 * self.anim_progress)
         
@@ -96,17 +90,6 @@ class NeonButton(UIElement):
         
         surface.blit(shadow_surf, shadow_rect)
         surface.blit(text_surf, text_rect)
-        
-    def _pre_render(self):
-        # Рендерим текст заранее
-        self.text_surf, self.text_rect = self.font.render(self.text, C_TEXT_MAIN)
-        self.text_rect.center = self.rect.center
-        
-        # Создаем статичную подложку с конвертацией для скорости
-        self.surface = pygame.Surface((self.rect.w, self.rect.h), pygame.SRCALPHA).convert_alpha()
-        # Рисуем рамку один раз
-        pygame.draw.rect(self.surface, (*self.color, 40), (0, 0, self.rect.w, self.rect.h), border_radius=8)
-        pygame.draw.rect(self.surface, self.color, (0, 0, self.rect.w, self.rect.h), 2, border_radius=8)
 
 class NeonInput(UIElement):
     def __init__(self, label, value, x, y, w=300):

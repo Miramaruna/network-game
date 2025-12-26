@@ -17,8 +17,6 @@ WALL_HEIGHT = 10
 BROADCAST_PORT = 5556
 MAGIC_MESSAGE = b"NEON_DISCOVERY"
 
-data_lock = threading.Lock()
-
 # Глобальные переменные сервера
 players = {}
 chat_log = []
@@ -125,10 +123,7 @@ def threaded_client(conn, player_id):
 
     last_chat_index = len(chat_log)
     
-    # conn.send(pickle.dumps(players[player_id]))
-    with data_lock:
-        initial_data = pickle.dumps(players[player_id])
-    conn.send(initial_data)
+    conn.send(pickle.dumps(players[player_id]))
     
     while server_running:
         try:
@@ -258,8 +253,7 @@ def threaded_client(conn, player_id):
                     chat_log.append(f"{players[player_id].nickname}: {new_msg}")
                 if len(chat_log) > 20: chat_log.pop(0)
                 
-            with data_lock:
-                reply = {"players": players, "walls": static_entities}
+            reply = {"players": players, "walls": static_entities}
             
             current_chat_len = len(chat_log)
             new_messages_count = current_chat_len - last_chat_index

@@ -107,9 +107,6 @@ class Player:
             "shield": ShieldAbility(),
             "wall": WallAbility(),
         }
-        
-    # def get_rect(self):
-        # return pygame.Rect(self.x, self.y, self.width, self.height)
     
     def cast_ability(self, ability_key):
         if ability_key in self.abilities:
@@ -143,6 +140,15 @@ class Player:
             s = pygame.Surface((int(radius*2), int(radius*2)), pygame.SRCALPHA)
             pygame.draw.circle(s, (0, 150, 255, 100), (int(radius), int(radius)), int(radius))
             win.blit(s, (screen_x - radius + self.width//2, screen_y - radius + self.height//2))
+
+        # 4. HP Bar
+        # hp_pct = self.hp / 100
+        # hp_bar_w = int(self.width * hp_pct)
+        # hp_color = (0, 255, 0) if self.hp > 30 else (255, 50, 50)
+        
+        # pygame.draw.rect(win, (50, 50, 50), (screen_x, screen_y - 15, self.width, 8))
+        # pygame.draw.rect(win, hp_color, (screen_x, screen_y - 15, hp_bar_w, 8))
+        # pygame.draw.rect(win, (255, 255, 255), (screen_x, screen_y - 15, self.width, 8), 1)
         
         hp_pct = max(0, self.hp / 100)
         hp_bar_w = self.width + 10 
