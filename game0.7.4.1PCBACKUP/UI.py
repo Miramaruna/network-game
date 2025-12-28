@@ -14,7 +14,6 @@ C_BG          = (10, 10, 20)
 C_GRID_BRIGHT = (60, 60, 100)
 C_GRID_DIM    = (30, 30, 50)
 C_ACCENT      = (0, 255, 255)
-C_TABLE_BG    = (10, 10, 15, 220) # Полупрозрачный фон для таблицы
 
 MAP_WIDTH = 2000  # Эти значения должны соответствовать размерам карты
 MAP_HEIGHT = 2000
@@ -42,7 +41,6 @@ try:
     FONT_DEBUG = pygame.freetype.SysFont("consolas", 14)
     FONT_MED = pygame.freetype.SysFont(FONT_CHOICES, 24, bold=True)
     FONT_SMALL = pygame.freetype.SysFont(FONT_CHOICES, 14)
-    FONT_TABLE = pygame.freetype.SysFont("consolas, menlo", 16, bold=True)
 except:
     pass # Fallback если freetype не работает
 
@@ -242,55 +240,3 @@ def draw_cyber_health(surface, x, y, w, h, current_hp, max_hp=100, anim_hp=None)
     ty = y + h//2 - text_h//2
     surface.blit(shadow_surf, (tx+2, ty+2)) 
     surface.blit(txt_surf, (tx, ty))
-    
-# --- ФУНКЦИЯ ОТРИСОВКИ ТАБЛИЦЫ ЛИДЕРОВ (SCOREBOARD) ---
-def draw_scoreboard(surface, players, my_id):
-    w, h = get_screen_size(surface)
-    board_w = 700
-    board_h = 500
-    x = w // 2 - board_w // 2
-    y = h // 2 - board_h // 2
-    
-    # Фон
-    s = pygame.Surface((board_w, board_h), pygame.SRCALPHA)
-    pygame.draw.rect(s, C_TABLE_BG, s.get_rect(), border_radius=10)
-    pygame.draw.rect(s, C_NEON_CYAN, s.get_rect(), 2, border_radius=10)
-    
-    # Заголовки
-    headers = ["NICKNAME", "KILLS", "DEATHS", "K/D", "PING"]
-    col_x = [30, 300, 400, 500, 600]
-    
-    for i, head in enumerate(headers):
-        FONT_TABLE.render_to(s, (col_x[i], 20), head, C_TEXT_DIM)
-    
-    pygame.draw.line(s, C_NEON_CYAN, (20, 50), (board_w-20, 50), 1)
-    
-    # Сортировка игроков по убийствам
-    sorted_players = sorted(players.values(), key=lambda p: p.kills, reverse=True)
-    
-    y_off = 70
-    for p in sorted_players:
-        if y_off > board_h - 40: break
-        
-        # Цвет строки (свой игрок выделен)
-        row_col = C_NEON_GREEN if p.id == my_id else C_TEXT_MAIN
-        
-        # Расчет K/D
-        kd = 0.0
-        if p.deaths > 0: kd = p.kills / p.deaths
-        elif p.kills > 0: kd = float(p.kills) # Если смертей 0, а убийства есть
-        
-        # Отрисовка данных
-        FONT_TABLE.render_to(s, (col_x[0], y_off), str(p.nickname)[:18], row_col)
-        FONT_TABLE.render_to(s, (col_x[1], y_off), str(p.kills), row_col)
-        FONT_TABLE.render_to(s, (col_x[2], y_off), str(p.deaths), row_col)
-        FONT_TABLE.render_to(s, (col_x[3], y_off), f"{kd:.1f}", row_col)
-        
-        # Пинг с цветом
-        ping_val = p.ping
-        ping_col = (0,255,0) if ping_val < 60 else (255,255,0) if ping_val < 120 else (255,0,0)
-        FONT_TABLE.render_to(s, (col_x[4], y_off), f"{ping_val}ms", ping_col)
-        
-        y_off += 30
-        
-    surface.blit(s, (x, y))

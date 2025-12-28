@@ -541,16 +541,13 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
                         p.deleteBullet(bullet); hit_data.append({"target_id": pid, "damage": 10})
                         break
         
-        # packet = {"type": "UPDATE", "player": p}
-        # Отправляем пинг в пакете
-        current_ping = int(n.latency)
-        packet = {"type": "UPDATE", "player": p, "ping": current_ping}
+        packet = {"type": "UPDATE", "player": p}
         if hit_data: packet["hits"] = hit_data
         if msg_to_send: packet["msg"] = msg_to_send
         if ability_to_cast: packet["ability_cast"] = ability_to_cast
 
         server_data = n.send(packet)
-        if server_data == "NETWORK_FAILURE" or server_data == None: n.disconnect(); run = False; break
+        if server_data == "NETWORK_FAILURE": n.disconnect(); run = False; break
             
         all_players = server_data.get("players", {})
         last_walls = server_data.get("walls", {})
@@ -561,8 +558,6 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
         if p.id in all_players:
             srv_p = all_players[p.id]
             p.hp = srv_p.hp
-            p.kills = srv_p.kills
-            p.deaths = srv_p.deaths
             p.setPose(srv_p.x, srv_p.y)
             for k, ab in srv_p.abilities.items():
                 if k in p.abilities:
@@ -640,10 +635,6 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
             FONT_SMALL.render_to(win, (15, HEIGHT-75), current_message + "_", C_NEON_CYAN)
             
         debug_ui.draw(win, p, all_players, int(clock.get_fps()), n)
-        
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_TAB]:
-            draw_scoreboard(win, all_players, p.id)
         
         mx, my = pygame.mouse.get_pos()
         draw_custom_cursor(win, mx, my)

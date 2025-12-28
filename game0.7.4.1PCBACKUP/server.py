@@ -102,8 +102,6 @@ def bot_simulation_thread():
                                     bullets_to_remove.append(bullet)
                                     target.hp -= 10
                                     if target.hp <= 0:
-                                        p.kills += 1
-                                        target.deaths += 1
                                         chat_log.append(f"[KILL] {p.nickname} уничтожил {target.nickname}!")
                                     break
                 
@@ -200,8 +198,6 @@ def threaded_client(conn, player_id):
                 # 3. Получаем способность (если есть)
                 if "ability_cast" in data:
                     ability_cast = data["ability_cast"]
-                
-                client_ping = data.get("ping", 0)
         
             # p_obj = data.get("player")
             # new_msg = data.get("msg")
@@ -214,15 +210,6 @@ def threaded_client(conn, player_id):
                 players[player_id] = p_obj 
                 players[player_id].hp = current_hp
                 players[player_id].abilities = current_abilities
-                
-                current_kills = players[player_id].kills
-                current_deaths = players[player_id].deaths
-                
-                players[player_id] = p_obj 
-                players[player_id].kills = current_kills
-                players[player_id].deaths = current_deaths
-                players[player_id].ping = client_ping
-                
                 players[player_id].update_rect()
                 
                 server_works() # Проверка стен
@@ -240,8 +227,6 @@ def threaded_client(conn, player_id):
                     #     continue 
                     target.hp -= hit["damage"]
                     if target.hp <= 0:
-                        players[player_id].kills += 1
-                        target.deaths += 1
                         chat_log.append(f"[KILL] {players[player_id].nickname} -> {target.nickname}")
 
             if ability_cast and player_id in players:

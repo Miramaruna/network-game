@@ -83,7 +83,7 @@ class Player:
     
     __slots__ = ('x', 'y', 'width', 'height', 'color', 'rect', 'vel', 'hp', 
                 'bullets', 'id', 'nickname', 'last_move', 'trail_particles', 'skin_id', 'abilities', 
-                'trail_color', 'outline_color', 'kills', 'deaths', 'ping')
+                'trail_color', 'outline_color')
 
     def __init__(self, x, y, width, height, color, p_id):
         self.x = x
@@ -107,9 +107,6 @@ class Player:
             "shield": ShieldAbility(),
             "wall": WallAbility(),
         }
-        self.kills = 0
-        self.deaths = 0
-        self.ping = 0
         
     # def get_rect(self):
         # return pygame.Rect(self.x, self.y, self.width, self.height)
@@ -148,11 +145,11 @@ class Player:
             win.blit(s, (screen_x - radius + self.width//2, screen_y - radius + self.height//2))
         
         hp_pct = max(0, self.hp / 100)
-        hp_bar_w = self.width + 10
+        hp_bar_w = self.width + 10 
         hp_bar_h = 6
         
         # Центрирование над игроком
-        bar_x = screen_x - 5
+        bar_x = screen_x - 5 
         bar_y = screen_y - 15
         
         # Черная подложка
