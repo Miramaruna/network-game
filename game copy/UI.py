@@ -1,4 +1,4 @@
-import pygame, pygame.freetype, os
+import pygame, pygame.freetype
 pygame.freetype.init()
 
 # ЦВЕТА
@@ -21,48 +21,29 @@ MAP_HEIGHT = 2000
 
 # from client import get_screen_size
 
-base_path = os.path.dirname(__file__)
-font_path = os.path.join(base_path, 'shrifts', 'Arls.otf')
-
-# def get_font(name, size, bold=False):
-#     try:
-#         return pygame.freetype.SysFont(name, size, bold=bold)
-#     except:
-#         return pygame.freetype.SysFont("arial", size, bold=bold)
 def get_font(name, size, bold=False):
     try:
-        # Указываем прямой путь к твоему файлу
-        import os
-        path = os.path.join("shrifts", "Arls.otf")
-        return pygame.freetype.Font(path, size)
+        return pygame.freetype.SysFont(name, size, bold=bold)
     except:
-        return pygame.freetype.SysFont('sans-serif', size)
+        return pygame.freetype.SysFont("arial", size, bold=bold)
 
-# FONT_BIG   = get_font("impact, verendana, arial black", 70)
-# FONT_MED   = get_font("segoe ui, roboto, arial", 24)
-# FONT_SMALL = get_font("consolas, menlo", 14)
+FONT_BIG   = get_font("impact, verendana, arial black", 70)
+FONT_MED   = get_font("segoe ui, roboto, arial", 24)
+FONT_SMALL = get_font("consolas, menlo", 14)
 
-# # --- ШРИФТЫ ---
-# FONT_CHOICES = ["arial", "dejavusans", "verdana"]
+# --- ШРИФТЫ ---
+FONT_CHOICES = ["arial", "dejavusans", "verdana"]
 try:
     import pygame.freetype
     pygame.freetype.init()
-    # FONT_UI = pygame.freetype.SysFont(FONT_CHOICES, 16)
-    # FONT_HUD = pygame.freetype.SysFont(FONT_CHOICES, 20, bold=True)
-    # FONT_TITLE = pygame.freetype.SysFont(FONT_CHOICES, 70, bold=True)
-    # FONT_DEBUG = pygame.freetype.SysFont("consolas", 14)
-    # FONT_MED = pygame.freetype.SysFont(FONT_CHOICES, 24, bold=True)
-    # FONT_SMALL = pygame.freetype.SysFont(FONT_CHOICES, 14)
-    # FONT_TABLE = pygame.freetype.SysFont("consolas, menlo", 16, bold=True)
-    FONT_UI = pygame.freetype.Font(font_path, 16)
-    FONT_HUD = pygame.freetype.Font(font_path, 20, bold=True)
-    FONT_TITLE = pygame.freetype.Font(font_path, 70, bold=True)
-    FONT_DEBUG = pygame.freetype.Font(font_path, 14)
-    FONT_MED = pygame.freetype.Font(font_path, 24, bold=True)
-    FONT_SMALL = pygame.freetype.Font(font_path, 14)
-    FONT_TABLE = pygame.freetype.Font(font_path, 16, bold=True)
+    FONT_UI = pygame.freetype.SysFont(FONT_CHOICES, 16)
+    FONT_HUD = pygame.freetype.SysFont(FONT_CHOICES, 20, bold=True)
+    FONT_TITLE = pygame.freetype.SysFont(FONT_CHOICES, 70, bold=True)
+    FONT_DEBUG = pygame.freetype.SysFont("consolas", 14)
+    FONT_MED = pygame.freetype.SysFont(FONT_CHOICES, 24, bold=True)
+    FONT_SMALL = pygame.freetype.SysFont(FONT_CHOICES, 14)
+    FONT_TABLE = pygame.freetype.SysFont("consolas, menlo", 16, bold=True)
 except:
-    print(f"Шрифт не найден по пути: {font_path}")
     pass # Fallback если freetype не работает
 
 def get_screen_size(surface):
