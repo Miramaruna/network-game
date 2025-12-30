@@ -469,11 +469,7 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
     displayed_hp = p.hp
     debug_ui = DebugInterface()
     
-    # touch_ctrl = TouchControls(WIDTH, HEIGHT) # Инициализация управления
-    is_mobile = os.environ.get('PYTHON_SERVICE_INSTANCE') is not None or True # Флаг мобилки
-    if is_mobile:
-        touch_ctrl = TouchControls(WIDTH, HEIGHT) # Инициализация управления
-    # is_mobile = True
+    touch_ctrl = TouchControls(WIDTH, HEIGHT) # Инициализация управления
     
     pygame.mouse.set_visible(False) 
 
@@ -500,56 +496,24 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
         for event in pygame.event.get():
             if event.type == pygame.QUIT: run = False
             tx, ty = -1, -1
-            touch_id = None
-            
-            if is_mobile:
-                if event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
+            # touch_id = None
+        
+            if event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
                     tx, ty = event.x * WIDTH, event.y * HEIGHT
-                    touch_id = event.finger_id
-                elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP):
+                    # touch_id = event.finger_id
+            elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION, pygame.MOUSEBUTTONUP):
                     tx, ty = event.pos
-                    touch_id = "mouse"
 
-                # 2. Обработка НАЖАТИЯ (Down)
-                if event.type in (pygame.FINGERDOWN, pygame.MOUSEBUTTONDOWN):
+            # 2. Обработка НАЖАТИЯ (Down)
+            if event.type in (pygame.FINGERDOWN, pygame.MOUSEBUTTONDOWN):
                     # Проверка кнопок
                     if touch_ctrl.btn_exit.collidepoint(tx, ty): run = False
                     if touch_ctrl.btn_chat.collidepoint(tx, ty): typing_mode = not typing_mode
                     
-                    # Проверка джойстика: активируем только если нажали прямо в его зону
-                    dist = pygame.Vector2(tx, ty).distance_to(touch_ctrl.joy_center)
-                    if dist < touch_ctrl.joy_radius + 20:
-                        touch_ctrl.joy_active = True
-                        touch_ctrl.joy_touch_id = touch_id
-                    
-                    # Способности (если не джойстик)
-                    if not touch_ctrl.joy_active:
-                        if touch_ctrl.btn_ability1.collidepoint(tx, ty):
+                    if touch_ctrl.btn_ability1.collidepoint(tx, ty):
                             if p.cast_ability("shield"): ability_to_cast = {"key": "shield"}
-                        elif touch_ctrl.btn_ability2.collidepoint(tx, ty):
+                    elif touch_ctrl.btn_ability2.collidepoint(tx, ty):
                             if p.cast_ability("wall"): ability_to_cast = {"key": "wall"}
-                        # Стрельба
-                        elif tx > WIDTH // 2:
-                            p.shoot(tx, ty, scroll)
-                            shoot_flash = 5; flash_pos = (tx, ty)
-
-                # 3. Обработка ДВИЖЕНИЯ (Motion)
-                if event.type in (pygame.FINGERMOTION, pygame.MOUSEMOTION):
-                    # Обновляем джойстик только если это тот же палец/мышь
-                    if touch_ctrl.joy_active and touch_ctrl.joy_touch_id == touch_id:
-                        dist = pygame.Vector2(tx, ty).distance_to(touch_ctrl.joy_center)
-                        if dist < 75:
-                            touch_ctrl.joy_pos = pygame.Vector2(tx, ty)
-                        else:
-                            dir_vec = (pygame.Vector2(tx, ty) - touch_ctrl.joy_center).normalize()
-                            touch_ctrl.joy_pos = touch_ctrl.joy_center + dir_vec * 75
-
-                # 4. Обработка ОТПУСКАНИЯ (Up)
-                if event.type in (pygame.FINGERUP, pygame.MOUSEBUTTONUP):
-                    if touch_ctrl.joy_active and touch_ctrl.joy_touch_id == touch_id:
-                        touch_ctrl.joy_active = False
-                        touch_ctrl.joy_touch_id = None
-                        touch_ctrl.joy_pos = pygame.Vector2(touch_ctrl.joy_center)
 
             # --- КЛАВИАТУРА (Оставляем как было) ---
             if event.type == pygame.KEYDOWN:
@@ -585,10 +549,6 @@ def game_loop(server_ip, nickname, selected_skin, is_local_host):
         # if not typing_mode and p.hp > 0: p.move(MAP_WIDTH, MAP_HEIGHT)
         if p.hp > 0:
             if not typing_mode:
-                jx, jy = touch_ctrl.get_movement()
-                if jx != 0 or jy != 0:
-                    p.x += jx * p.vel
-                    p.y += jy * p.vel
                 # Если не печатаем -> слушаем WASD и обновляем пули
                 p.move(MAP_WIDTH, MAP_HEIGHT)
             else:
